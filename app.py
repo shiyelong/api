@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from googletrans import Translator
+from pytranslation import Translator  # 使用 pytranslation 代替 googletrans
 import pytesseract
 from PIL import Image
 import io
@@ -8,7 +8,6 @@ from flask_cors import CORS  # 处理跨域请求
 # 初始化 Flask 应用
 app = Flask(__name__)
 CORS(app)  # 启用 CORS 支持
-translator = Translator()
 
 @app.route('/')
 def index():
@@ -26,8 +25,8 @@ def translate():
     print(f"Translating: {text}")  # 打印接收到的文本
 
     try:
-        # 翻译文本
-        translated_text = translator.translate(text, dest='zh-cn').text
+        # 使用 pytranslation 翻译文本
+        translated_text = Translator().translate(text, dest='zh').text
         print(f"Translated Text: {translated_text}")  # 打印翻译结果
         return jsonify({'translatedText': translated_text})
     except Exception as e:
