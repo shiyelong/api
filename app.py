@@ -2,11 +2,10 @@ import sys
 print("Python Path:", sys.path)
 print("Python Version:", sys.version)
 from flask import Flask, request, jsonify
-from deep_translator import GoogleTranslator  # 使用 deep-translator 进行翻译
-import pytesseract
-from PIL import Image
-import io
+from translate import Translator  # 使用 translate 进行翻译
+import easyocr  # 使用 EasyOCR 进行 OCR
 from flask_cors import CORS  # 处理跨域请求
+import io
 
 # 初始化 Flask 应用
 app = Flask(__name__)
@@ -16,8 +15,8 @@ CORS(app)  # 启用 CORS 支持
 def index():
     return "欢迎来到 Flask API！"  # 提供欢迎信息
 
-@app.route('/translate', methods=['POST'])
-def translate():
+@app.route('/translate_text', methods=['POST'])
+def translate_text():
     # 检查请求数据
     if not request.json or 'text' not in request.json:
         return jsonify({'error': '未提供文本'}), 400
@@ -28,29 +27,48 @@ def translate():
     print(f"正在翻译: {text}")  # 打印接收到的文本
 
     try:
-        # 使用 deep-translator 翻译文本，目标语言为简体中文
-        translated_text = GoogleTranslator(source='auto', target='zh-CN').translate(text)
-        print(f"翻译结果: {translated_text}")  # 打印翻译结果
+        # 将文本翻译成中文
+        translator = Translator(to_lang="zh")
+        translated_text = translator.translate(text)
         return jsonify({'translatedText': translated_text})
+
     except Exception as e:
         print(f"翻译过程中出错: {str(e)}")  # 打印错误信息
         return jsonify({'error': str(e)}), 500
 
-@app.route('/ocr', methods=['POST'])
-def ocr():
+@app.route('/ocr_and_translate', methods=['POST'])
+def ocr_and_translate():
     # 检查请求是否包含图像文件
     if 'image' not in request.files:
         return jsonify({'error': '未上传图像'}), 400
 
     image_file = request.files['image']
-    
+
     try:
-        image = Image.open(io.BytesIO(image_file.read()))
-        # 使用 pytesseract 提取图像中的文本
-        ocr_text = pytesseract.image_to_string(image)
-        return jsonify({'ocrText': ocr_text})
+        # 读取图像文件
+        image = image_file.read()
+        
+        # 初始化 EasyOCR 读取器，支持中文、英文和日文
+        reader = easyocr.Reader(['ch_sim', 'en', 'ja'])  # 支持简体中文、英文和日文
+
+        # 执行 OCR 识别
+        result = reader.readtext(image, detail=1)
+
+        # 提取识别的文本
+        ocr_text = " ".join([text[1] for text in result])
+        print(f"识别出的文本: {ocr_text}")  # 打印识别出的文本
+
+        # 检查识别的文本是否包含中文
+        if any(u'\u4e00' <= char <= u'\u9fff' for char in ocr_text):  # 检查是否包含中文字符
+            return jsonify({'ocrText': ocr_text.strip()})  # 直接返回识别到的中文
+        
+        # 如果是英文或日文，则翻译成中文
+        translator = Translator(to_lang="zh")
+        translated_text = translator.translate(ocr_text)
+        return jsonify({'translatedText': translated_text})
+
     except Exception as e:
-        print(f"OCR 过程中出错: {str(e)}")  # 打印错误信息
+        print(f"处理过程中出错: {str(e)}")  # 打印错误信息
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
