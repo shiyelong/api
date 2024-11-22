@@ -1,5 +1,8 @@
+import sys
+print("Python Path:", sys.path)
+print("Python Version:", sys.version)
 from flask import Flask, request, jsonify
-from pytranslation import Translator  # 使用 pytranslation 代替 googletrans
+from pytranslation import Translator
 import pytesseract
 from PIL import Image
 import io
@@ -21,7 +24,7 @@ def translate():
 
     data = request.json
     text = data['text']
-    
+
     print(f"Translating: {text}")  # 打印接收到的文本
 
     try:
