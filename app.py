@@ -16,8 +16,8 @@ ja_zh_model_name = "Helsinki-NLP/opus-mt-ja-zh"
 en_zh_model = None
 ja_zh_model = None
 
-# 初始化 EasyOCR 读取器，支持简体中文和英文
-reader = easyocr.Reader(['ch_sim', 'en'])  # 只支持简体中文和英文
+# 初始化 EasyOCR 读取器
+reader = easyocr.Reader(['ch_sim', 'en', 'ja'])  # 支持简体中文、英文和日文
 
 @app.route('/')
 def index():
@@ -25,24 +25,23 @@ def index():
 
 def load_models():
     global en_zh_model, ja_zh_model
-    if en_zh_model is None:
+    if en_zh_model is None or ja_zh_model is None:
         try:
+            # 加载英语到中文模型
             en_zh_tokenizer = MarianTokenizer.from_pretrained(en_zh_model_name)
             en_zh_model = MarianMTModel.from_pretrained(en_zh_model_name)
-        except Exception as e:
-            print(f"无法加载英语到中文模型: {e}")
-            return jsonify({'error': '无法加载英语到中文模型'}), 500
-
-    if ja_zh_model is None:
-        try:
+            
+            # 加载日语到中文模型
             ja_zh_tokenizer = MarianTokenizer.from_pretrained(ja_zh_model_name)
             ja_zh_model = MarianMTModel.from_pretrained(ja_zh_model_name)
         except Exception as e:
-            print(f"无法加载日语到中文模型: {e}")
-            return jsonify({'error': '无法加载日语到中文模型'}), 500
+            print(f"加载模型失败: {e}")
+            return jsonify({'error': '无法加载模型'}), 500
 
 @app.route('/translate', methods=['POST'])
 def translate():
+    load_models()
+
     if not request.json or 'text' not in request.json:
         return jsonify({'error': '未提供文本'}), 400
 
@@ -85,6 +84,7 @@ def ocr_and_translate():
         ocr_text = " ".join([text[1] for text in result])
         print(f"识别出的文本: {ocr_text}")
 
+        # 自动识别语言
         lang, _ = langid.classify(ocr_text)
 
         if lang == 'en':
