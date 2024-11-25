@@ -43,8 +43,6 @@ def load_models():
 
 @app.route('/translate', methods=['POST'])
 def translate():
-    load_models()
-
     if not request.json or 'text' not in request.json:
         return jsonify({'error': '未提供文本'}), 400
 
@@ -54,14 +52,20 @@ def translate():
     print(f"正在翻译: {text}")
 
     try:
-        lang, _ = langid.classify(text)
+        # 使用 EasyOCR 识别文本
+        ocr_results = reader.readtext(text, detail=1)
+        ocr_text = " ".join([result[1] for result in ocr_results])
+        print(f"OCR 识别出的文本: {ocr_text}")
+
+        # 自动识别语言
+        lang, _ = langid.classify(ocr_text)
 
         if lang == 'en':
-            inputs = en_zh_tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+            inputs = en_zh_tokenizer(ocr_text, return_tensors="pt", padding=True, truncation=True)
             translated = en_zh_model.generate(**inputs)
             translated_text = en_zh_tokenizer.decode(translated[0], skip_special_tokens=True)
         elif lang == 'ja':
-            inputs = ja_zh_tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+            inputs = ja_zh_tokenizer(ocr_text, return_tensors="pt", padding=True, truncation=True)
             translated = ja_zh_model.generate(**inputs)
             translated_text = ja_zh_tokenizer.decode(translated[0], skip_special_tokens=True)
         else:
@@ -86,6 +90,7 @@ def ocr_and_translate():
         ocr_text = " ".join([text[1] for text in result])
         print(f"识别出的文本: {ocr_text}")
 
+        # 自动识别语言
         lang, _ = langid.classify(ocr_text)
 
         if lang == 'en':
