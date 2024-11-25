@@ -3,7 +3,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from transformers import MarianMTModel, MarianTokenizer
 import langid
-import os
 
 # 初始化 Flask 应用
 app = Flask(__name__)
@@ -44,7 +43,7 @@ def load_models():
 
 @app.route('/translate', methods=['POST'])
 def translate():
-    load_models()  # 在处理请求时加载模型
+    load_models()
 
     if not request.json or 'text' not in request.json:
         return jsonify({'error': '未提供文本'}), 400
@@ -55,7 +54,6 @@ def translate():
     print(f"正在翻译: {text}")
 
     try:
-        # 自动识别语言
         lang, _ = langid.classify(text)
 
         if lang == 'en':
