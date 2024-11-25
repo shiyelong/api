@@ -6,7 +6,7 @@ from translate import Translator  # 使用 translate 进行翻译
 import easyocr  # 使用 EasyOCR 进行 OCR
 from flask_cors import CORS  # 处理跨域请求
 import io
-
+#
 # 初始化 Flask 应用
 app = Flask(__name__)
 CORS(app)  # 启用 CORS 支持
