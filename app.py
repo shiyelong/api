@@ -17,7 +17,7 @@ en_zh_model = None
 ja_zh_model = None
 
 # 初始化 EasyOCR 读取器，支持简体中文、英文和日文
-reader = easyocr.Reader(['ch_sim', 'en', 'ja'])
+reader = easyocr.Reader(['ch_sim', 'en'])
 
 @app.route('/')
 def index():
