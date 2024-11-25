@@ -17,7 +17,7 @@ en_zh_model = None
 ja_zh_model = None
 
 # 初始化语音识别器
-reader = easyocr.Reader(['ch_sim', 'en'])  # 只支持简体中文和英文
+# reader = easyocr.Reader(['ch_sim', 'en'])  # 只支持简体中文和英文
 
 @app.route('/')
 def index():
@@ -128,4 +128,7 @@ def ocr_and_translate():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    try:
+        app.run(debug=True)
+    except Exception as e:
+        print(f"启动应用时发生错误: {e}")
