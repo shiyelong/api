@@ -2,3 +2,5 @@ Flask
 translate
 easyocr
 flask-cors
+torch
+OpenNMT-py

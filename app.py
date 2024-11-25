@@ -1,15 +1,32 @@
 import sys
-print("Python Path:", sys.path)
-print("Python Version:", sys.version)
 from flask import Flask, request, jsonify
-from translate import Translator  # 使用 translate 进行翻译
-import easyocr  # 使用 EasyOCR 进行 OCR
-from flask_cors import CORS  # 处理跨域请求
-import io
-#
+from flask_cors import CORS
+import easyocr
+import torch
+from onmt.translate.translator import build_translator
+from onmt.opts import initial_options, model_options, translate_options
+
 # 初始化 Flask 应用
 app = Flask(__name__)
 CORS(app)  # 启用 CORS 支持
+
+# 加载 OpenNMT 翻译模型的函数
+def load_model(model_path):
+    # 设置模型参数
+    options = initial_options()
+    model_options(options)
+    translate_options(options)
+
+    # 指定模型文件
+    options.models = [model_path]
+    options.verbose = True
+
+    # 创建翻译器
+    translator = build_translator(options, report_score=True)
+    return translator
+
+# 在全局变量中存储翻译器
+translator = load_model('/path/to/your/model/model.pt')  # 替换为你的模型路径
 
 @app.route('/')
 def index():
@@ -17,7 +34,6 @@ def index():
 
 @app.route('/translate_text', methods=['POST'])
 def translate_text():
-    # 检查请求数据
     if not request.json or 'text' not in request.json:
         return jsonify({'error': '未提供文本'}), 400
 
@@ -27,15 +43,16 @@ def translate_text():
     print(f"正在翻译: {text}")  # 打印接收到的文本
 
     try:
-        # 自动检测输入文本的语言并将其翻译成中文
-        translator = Translator(to_lang="zh")
-        translated_text = translator.translate(text)
+        # 调用翻译
+        translated_output = translator.translate(text)
+        translated_text = translated_output[0].pred_sents[0]
+        
         return jsonify({'translatedText': translated_text})
 
     except Exception as e:
-        print(f"翻译过程中出错: {str(e)}")  # 打印错误信息
+        print(f"翻译过程中出错: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
+    
 @app.route('/ocr_and_translate', methods=['POST'])
 def ocr_and_translate():
     # 检查请求是否包含图像文件
@@ -58,17 +75,17 @@ def ocr_and_translate():
         ocr_text = " ".join([text[1] for text in result])
         print(f"识别出的文本: {ocr_text}")  # 打印识别出的文本
 
-        # 检查识别的文本是否包含中文
-        if any(u'\u4e00' <= char <= u'\u9fff' for char in ocr_text):  # 检查是否包含中文字符
+        # 如果识别的文本有中文，直接返回
+        if any(u'\u4e00' <= char <= u'\u9fff' for char in ocr_text):
             return jsonify({'ocrText': ocr_text.strip()})  # 直接返回识别到的中文
         
         # 如果是英文或日文，则翻译成中文
-        translator = Translator(to_lang="zh")
-        translated_text = translator.translate(ocr_text)
+        translated_output = translator.translate(ocr_text)
+        translated_text = translated_output[0].pred_sents[0]
         return jsonify({'translatedText': translated_text})
 
     except Exception as e:
-        print(f"处理过程中出错: {str(e)}")  # 打印错误信息
+        print(f"处理过程中出错: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
