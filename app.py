@@ -40,10 +40,34 @@ def load_models():
             print(f"加载模型时出错: {e}")
 
 @app.route('/translate', methods=['POST'])
+def load_models():
+    global en_zh_model, ja_zh_model
+    print("尝试加载模型...")  # 增加打印
+    if en_zh_model is None:
+        try:
+            print("正在加载英语到中文模型...")
+            en_zh_tokenizer = MarianTokenizer.from_pretrained(en_zh_model_name)
+            en_zh_model = MarianMTModel.from_pretrained(en_zh_model_name)
+            print("英语到中文模型加载成功")
+        except Exception as e:
+            print(f"无法加载英语到中文模型: {e}")
+
+    if ja_zh_model is None:
+        try:
+            print("正在加载日语到中文模型...")
+            ja_zh_tokenizer = MarianTokenizer.from_pretrained(ja_zh_model_name)
+            ja_zh_model = MarianMTModel.from_pretrained(ja_zh_model_name)
+            print("日语到中文模型加载成功")
+        except Exception as e:
+            print(f"无法加载日语到中文模型: {e}")
+
+@app.route('/translate', methods=['POST'])
 def translate():
-    load_models()  # 延迟加载模型
+    print("接收到翻译请求...")  # 增加打印
+    load_models()
 
     if not request.json or 'text' not in request.json:
+        print("未提供文本")  # 调试输出
         return jsonify({'error': '未提供文本'}), 400
 
     data = request.json
@@ -52,16 +76,16 @@ def translate():
 
     try:
         lang, _ = langid.classify(text)
-        print(f"识别到的语言: {lang}")
+        print(f"识别到的语言: {lang}")  # 打印语言识别结果
 
         if lang == 'en':
-            inputs = MarianTokenizer.from_pretrained(en_zh_model_name)(text, return_tensors="pt", padding=True, truncation=True)
+            inputs = en_zh_tokenizer(text, return_tensors="pt", padding=True, truncation=True)
             translated = en_zh_model.generate(**inputs)
-            translated_text = MarianTokenizer.from_pretrained(en_zh_model_name).decode(translated[0], skip_special_tokens=True)
+            translated_text = en_zh_tokenizer.decode(translated[0], skip_special_tokens=True)
         elif lang == 'ja':
-            inputs = MarianTokenizer.from_pretrained(ja_zh_model_name)(text, return_tensors="pt", padding=True, truncation=True)
+            inputs = ja_zh_tokenizer(text, return_tensors="pt", padding=True, truncation=True)
             translated = ja_zh_model.generate(**inputs)
-            translated_text = MarianTokenizer.from_pretrained(ja_zh_model_name).decode(translated[0], skip_special_tokens=True)
+            translated_text = ja_zh_tokenizer.decode(translated[0], skip_special_tokens=True)
         else:
             return jsonify({'error': '不支持的语言'}), 400
         
