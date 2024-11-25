@@ -25,18 +25,53 @@ def index():
 
 def load_models():
     global en_zh_model, ja_zh_model
-    if en_zh_model is None or ja_zh_model is None:
-        try:
-            # 加载英语到中文模型
+    try:
+        if en_zh_model is None:
             en_zh_tokenizer = MarianTokenizer.from_pretrained(en_zh_model_name)
             en_zh_model = MarianMTModel.from_pretrained(en_zh_model_name)
-            
-            # 加载日语到中文模型
+            print("英语到中文模型加载成功")
+        
+        if ja_zh_model is None:
             ja_zh_tokenizer = MarianTokenizer.from_pretrained(ja_zh_model_name)
             ja_zh_model = MarianMTModel.from_pretrained(ja_zh_model_name)
-        except Exception as e:
-            print(f"加载模型失败: {e}")
-            return jsonify({'error': '无法加载模型'}), 500
+            print("日语到中文模型加载成功")
+    except Exception as e:
+        print(f"加载模型失败: {e}")
+
+@app.route('/translate', methods=['POST'])
+def translate():
+    print("接收到翻译请求")  # 添加调试输出
+    load_models()  # 加载模型
+    print("模型加载完毕")
+
+    if not request.json or 'text' not in request.json:
+        print("未提供文本")  # 调试输出
+        return jsonify({'error': '未提供文本'}), 400
+
+    data = request.json
+    text = data['text']
+    print(f"正在翻译: {text}")  # 打印接收到的文本
+
+    try:
+        lang, _ = langid.classify(text)
+        print(f"识别到的语言: {lang}")  # 打印识别的语言
+
+        if lang == 'en':
+            inputs = en_zh_tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+            translated = en_zh_model.generate(**inputs)
+            translated_text = en_zh_tokenizer.decode(translated[0], skip_special_tokens=True)
+        elif lang == 'ja':
+            inputs = ja_zh_tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+            translated = ja_zh_model.generate(**inputs)
+            translated_text = ja_zh_tokenizer.decode(translated[0], skip_special_tokens=True)
+        else:
+            return jsonify({'error': '不支持的语言'}), 400
+        
+        return jsonify({'translatedText': translated_text})
+
+    except Exception as e:
+        print(f"翻译过程中出错: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/translate', methods=['POST'])
 def translate():
