@@ -16,8 +16,8 @@ ja_zh_model_name = "Helsinki-NLP/opus-mt-ja-zh"
 en_zh_model = None
 ja_zh_model = None
 
-# 初始化 EasyOCR 读取器，支持简体中文和英文
-reader = easyocr.Reader(['ch_sim', 'en'])  # 只支持简体中文和英文
+# 初始化 EasyOCR 读取器
+reader = easyocr.Reader(['ch_sim', 'en'])  # 支持简体中文、英文和日文
 
 @app.route('/')
 def index():
@@ -25,34 +25,37 @@ def index():
 
 def load_models():
     global en_zh_model, ja_zh_model
-    if en_zh_model is None or ja_zh_model is None:
-        try:
+    try:
+        if en_zh_model is None:
             print("正在加载英语到中文模型...")
             en_zh_tokenizer = MarianTokenizer.from_pretrained(en_zh_model_name)
             en_zh_model = MarianMTModel.from_pretrained(en_zh_model_name)
             print("英语到中文模型加载成功")
 
+        if ja_zh_model is None:
             print("正在加载日语到中文模型...")
             ja_zh_tokenizer = MarianTokenizer.from_pretrained(ja_zh_model_name)
             ja_zh_model = MarianMTModel.from_pretrained(ja_zh_model_name)
             print("日语到中文模型加载成功")
-        except Exception as e:
-            print(f"加载模型失败: {e}")
+
+    except Exception as e:
+        print(f"加载模型时发生错误: {str(e)}")
 
 @app.route('/translate', methods=['POST'])
 def translate():
-    load_models()  # 加载模型
+    load_models()
 
     if not request.json or 'text' not in request.json:
+        print("未提供文本")  # 添加调试输出
         return jsonify({'error': '未提供文本'}), 400
 
     data = request.json
     text = data['text']
-
-    print(f"正在翻译: {text}")
+    print(f"正在翻译: {text}")  # 打印接收到的文本
 
     try:
         lang, _ = langid.classify(text)
+        print(f"识别到的语言: {lang}")  # 打印识别的语言
 
         if lang == 'en':
             inputs = MarianTokenizer.from_pretrained(en_zh_model_name)(text, return_tensors="pt", padding=True, truncation=True)
@@ -63,6 +66,7 @@ def translate():
             translated = ja_zh_model.generate(**inputs)
             translated_text = MarianTokenizer.from_pretrained(ja_zh_model_name).decode(translated[0], skip_special_tokens=True)
         else:
+            print("不支持的语言")  # 打印信息
             return jsonify({'error': '不支持的语言'}), 400
         
         return jsonify({'translatedText': translated_text})
@@ -74,6 +78,7 @@ def translate():
 @app.route('/ocr_and_translate', methods=['POST'])
 def ocr_and_translate():
     if 'image' not in request.files:
+        print("未上传图像")  # 添加调试输出
         return jsonify({'error': '未上传图像'}), 400
 
     image_file = request.files['image']
