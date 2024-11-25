@@ -47,9 +47,9 @@ def ocr_and_translate():
     try:
         # 读取图像文件
         image = image_file.read()
-        
-        # 初始化 EasyOCR 读取器，支持中文、英文和日文
-        reader = easyocr.Reader(['ch_sim', 'en', 'ja'])  # 支持简体中文、英文和日文
+
+        # 初始化 EasyOCR 读取器，支持中文和英文
+        reader = easyocr.Reader(['ch_sim', 'en'])  # 仅支持简体中文和英文
 
         # 执行 OCR 识别
         result = reader.readtext(image, detail=1)
@@ -62,7 +62,7 @@ def ocr_and_translate():
         if any(u'\u4e00' <= char <= u'\u9fff' for char in ocr_text):  # 检查是否包含中文字符
             return jsonify({'ocrText': ocr_text.strip()})  # 直接返回识别到的中文
         
-        # 如果是英文或日文，则翻译成中文
+        # 如果是英文，则翻译成中文
         translator = Translator(to_lang="zh")
         translated_text = translator.translate(ocr_text)
         return jsonify({'translatedText': translated_text})
@@ -70,6 +70,7 @@ def ocr_and_translate():
     except Exception as e:
         print(f"处理过程中出错: {str(e)}")  # 打印错误信息
         return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)  # 在开发模式下运行
