@@ -109,4 +109,8 @@ def ocr_and_translate():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    try:
+        load_models()
+        app.run(debug=True)
+    except Exception as e:
+        print(f"应用启动失败: {str(e)}")
