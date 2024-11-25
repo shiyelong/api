@@ -16,8 +16,8 @@ ja_zh_model_name = "Helsinki-NLP/opus-mt-ja-zh"
 en_zh_model = None
 ja_zh_model = None
 
-# 初始化 EasyOCR 读取器
-reader = easyocr.Reader(['ch_sim', 'en', 'ja'])  # 支持简体中文、英文和日文
+# 初始化 EasyOCR 读取器，支持简体中文和英文
+reader = easyocr.Reader(['ch_sim', 'en'])  # 只支持简体中文和英文
 
 @app.route('/')
 def index():
