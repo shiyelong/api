@@ -16,8 +16,8 @@ ja_zh_model_name = "Helsinki-NLP/opus-mt-ja-zh"
 en_zh_model = None
 ja_zh_model = None
 
-# 正确初始化 EasyOCR 读取器，支持简体中文和英文
-reader = easyocr.Reader(['ch_sim', 'en'])  # 只支持简体中文和英文
+# 初始化 EasyOCR 读取器，支持简体中文、英文和日文
+reader = easyocr.Reader(['ch_sim', 'en', 'ja'])
 
 @app.route('/')
 def index():
@@ -25,56 +25,21 @@ def index():
 
 def load_models():
     global en_zh_model, ja_zh_model
-    try:
-        if en_zh_model is None:
+    if en_zh_model is None or ja_zh_model is None:
+        try:
+            # 加载英语到中文模型
             en_zh_tokenizer = MarianTokenizer.from_pretrained(en_zh_model_name)
             en_zh_model = MarianMTModel.from_pretrained(en_zh_model_name)
-            print("英语到中文模型加载成功")
-        
-        if ja_zh_model is None:
+            
+            # 加载日语到中文模型
             ja_zh_tokenizer = MarianTokenizer.from_pretrained(ja_zh_model_name)
             ja_zh_model = MarianMTModel.from_pretrained(ja_zh_model_name)
-            print("日语到中文模型加载成功")
-    except Exception as e:
-        print(f"加载模型失败: {e}")
+        except Exception as e:
+            print(f"加载模型失败: {e}")
+            return jsonify({'error': '无法加载模型'}), 500
 
 @app.route('/translate', methods=['POST'])
-def translate():
-    print("接收到翻译请求")  # 添加调试输出
-    load_models()  # 加载模型
-    print("模型加载完毕")
-
-    if not request.json or 'text' not in request.json:
-        print("未提供文本")  # 调试输出
-        return jsonify({'error': '未提供文本'}), 400
-
-    data = request.json
-    text = data['text']
-    print(f"正在翻译: {text}")  # 打印接收到的文本
-
-    try:
-        lang, _ = langid.classify(text)
-        print(f"识别到的语言: {lang}")  # 打印识别的语言
-
-        if lang == 'en':
-            inputs = en_zh_tokenizer(text, return_tensors="pt", padding=True, truncation=True)
-            translated = en_zh_model.generate(**inputs)
-            translated_text = en_zh_tokenizer.decode(translated[0], skip_special_tokens=True)
-        elif lang == 'ja':
-            inputs = ja_zh_tokenizer(text, return_tensors="pt", padding=True, truncation=True)
-            translated = ja_zh_model.generate(**inputs)
-            translated_text = ja_zh_tokenizer.decode(translated[0], skip_special_tokens=True)
-        else:
-            return jsonify({'error': '不支持的语言'}), 400
-        
-        return jsonify({'translatedText': translated_text})
-
-    except Exception as e:
-        print(f"翻译过程中出错: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/translate', methods=['POST'])
-def translate():
+def translate_text():  # 确保函数名称唯一
     load_models()
 
     if not request.json or 'text' not in request.json:
@@ -119,7 +84,6 @@ def ocr_and_translate():
         ocr_text = " ".join([text[1] for text in result])
         print(f"识别出的文本: {ocr_text}")
 
-        # 自动识别语言
         lang, _ = langid.classify(ocr_text)
 
         if lang == 'en':
@@ -140,5 +104,4 @@ def ocr_and_translate():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)  # 允许外部访问
-   
+    app.run(debug=True)
