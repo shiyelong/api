@@ -27,7 +27,7 @@ def translate_text():
     print(f"正在翻译: {text}")  # 打印接收到的文本
 
     try:
-        # 将文本翻译成中文
+        # 自动检测输入文本的语言并将其翻译成中文
         translator = Translator(to_lang="zh")
         translated_text = translator.translate(text)
         return jsonify({'translatedText': translated_text})
