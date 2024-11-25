@@ -1,0 +1,4 @@
+Flask
+translate
+easyocr
+flask-cors
